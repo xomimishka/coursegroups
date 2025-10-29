@@ -26,9 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $observers = [
     [
-        'eventname' => '\core\event\user_enrolment_created', // событие, на которое реагируем
-        'callback'  => '\local_coursegroups\observer::local_coursegroups_handle_user_enrolment_created', // функция которая выполнится при событии
-        'includefile' => '/local/coursegroups/classes/observer.php', // подключает файл где находится класс observer
-        'priority'    => 9999, // запуск позже всех остальных плагинов
+        'eventname' => '\core\event\role_assigned', // событие, на которое реагируем
+        'callback'  => '\local_coursegroups\observer::local_coursegroups_handle_role_assigned', // функция которая выполнится при событии
     ],
 ];

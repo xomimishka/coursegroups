@@ -33,10 +33,10 @@ require_once($CFG->dirroot . '/user/profile/lib.php');
 class observer {
 
     /**
-     * @param \core\event\user_enrolment_created $event
+     * @param \core\event\role_assigned $event
      * @return void
      */
-    public static function local_coursegroups_handle_user_enrolment_created(\core\event\user_enrolment_created $event) {
+    public static function local_coursegroups_handle_role_assigned(\core\event\role_assigned $event) {
         global $DB;
 
         $data = $event->get_data();
@@ -48,22 +48,22 @@ class observer {
         }
 
         // проверка роли
-        // $context = \context_course::instance($courseid);
-        // $roles = get_user_roles($context, $userid, true);
+        $context = \context_course::instance($courseid);
+        $roles = get_user_roles($context, $userid, true);
 
-        // $isstudent = false;
-        // if (!empty($roles)) {
-        //     foreach ($roles as $role) {
-        //         if ($role->shortname === 'student') {
-        //             $isstudent = true;
-        //             break;
-        //         }
-        //     }
-        // }
+        $isstudent = false;
+        if (!empty($roles)) {
+            foreach ($roles as $role) {
+                if ($role->shortname === 'student') {
+                    $isstudent = true;
+                    break;
+                }
+            }
+        }
 
-        // if (!$isstudent) {
-        //     return;
-        // }
+        if (!$isstudent) {
+            return;
+        }
 
         // подгрузка полей пользователя
         $user = \core_user::get_user($userid);
