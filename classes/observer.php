@@ -39,6 +39,21 @@ class observer {
     public static function local_coursegroups_handle_role_assigned(\core\event\role_assigned $event) {
         global $DB;
 
+        // Проверка включён ли плагин
+        $isenabled = get_config('local_coursegroups', 'isenabled');
+        if (!$isenabled) {
+            return;
+        }
+
+        // Проверка даты начала курса
+        $ignoreolddate = (int)get_config('local_coursegroups', 'ignoreolddate');
+        if ($ignoreolddate > 0) {
+            $course = $DB->get_record('course', ['id' => $event->courseid], 'id,startdate');
+            if ($course && $course->startdate < $ignoreolddate) {
+                return;
+            }
+        }
+
         $data = $event->get_data();
         $userid = $data['relateduserid'] ?? null;
         $courseid = $data['courseid'] ?? null;
