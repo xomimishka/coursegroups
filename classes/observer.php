@@ -26,16 +26,13 @@ namespace local_coursegroups;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/group/lib.php');
-require_once($CFG->dirroot . '/lib/accesslib.php');
-require_once($CFG->dirroot . '/user/profile/lib.php');
-
 class observer {
 
     /**
      * @param \core\event\role_assigned $event
      * @return void
      */
+    // Событии назначения роли пользователю
     public static function local_coursegroups_handle_role_assigned(\core\event\role_assigned $event) {
         global $DB;
 
@@ -55,62 +52,18 @@ class observer {
         }
 
         $data = $event->get_data();
-        $userid = $data['relateduserid'] ?? null;
-        $courseid = $data['courseid'] ?? null;
 
-        if (!$userid || !$courseid) {
+        if (empty($data['relateduserid']) || empty($data['courseid'])) {
             return;
         }
 
-        // проверка роли
-        $context = \context_course::instance($courseid);
-        $roles = get_user_roles($context, $userid, true);
+        // Создание задачи для добавления пользователя в группу
+        $task = new \local_coursegroups\task\handle_role_assigned();
+        $task->set_custom_data([
+            'userid'   => $data['relateduserid'],
+            'courseid'=> $data['courseid'],
+        ]);
 
-        $isstudent = false;
-        if (!empty($roles)) {
-            foreach ($roles as $role) {
-                if ($role->shortname === 'student') {
-                    $isstudent = true;
-                    break;
-                }
-            }
-        }
-
-        if (!$isstudent) {
-            return;
-        }
-
-        // подгрузка полей пользователя
-        $user = \core_user::get_user($userid);
-        profile_load_custom_fields($user);
-
-        $stgroup = $user->profile['stGroup'] ?? null;
-        if (empty($stgroup)) {
-            return; // если у пользователя не указано stGroup, то ничего не делаем
-        }
-
-        // существует ли группа с таким же названием в курсе
-        $existinggroup = $DB->get_record('groups', ['courseid' => $courseid, 'name' => $stgroup]);
-
-        if ($existinggroup) {
-            $groupid = $existinggroup->id;
-        } else {
-            // Создаём новую группу
-            $newgroup = new \stdClass();
-            $newgroup->courseid = $courseid;
-            $newgroup->name = $stgroup;
-            $newgroup->timecreated = time();
-            $newgroup->timemodified = time();
-
-            $groupid = groups_create_group($newgroup);
-            if (!$groupid) {
-                return;
-            }
-        }
-
-        // добавление пользователя в группу если его там нет
-        if (!groups_is_member($groupid, $userid)) {
-            groups_add_member($groupid, $userid);
-        }
+        \core\task\manager::queue_adhoc_task($task);
     }
 }
