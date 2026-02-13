@@ -61,7 +61,7 @@ class handle_user_updated extends adhoc_task {
 
             if ($usergroups) {
 
-                $pattern = '/^(?:КТ|ЭП|УЭ)/u';
+                $pattern = '/^(?:КТ|ЭП|УЭ)[бса][озв]/u';
 
                 foreach ($usergroups as $ugroup) {
 
