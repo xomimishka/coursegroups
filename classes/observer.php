@@ -66,4 +66,15 @@ class observer {
 
         \core\task\manager::queue_adhoc_task($task);
     }
+
+    public static function local_coursegroups_handle_user_updated(\core\event\user_updated $event) {
+
+    $task = new \local_coursegroups\task\handle_user_updated();
+    $task->set_custom_data([
+        'userid' => $event->objectid,
+    ]);
+
+    \core\task\manager::queue_adhoc_task($task);
+    }
+
 }

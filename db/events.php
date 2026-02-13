@@ -26,7 +26,11 @@ defined('MOODLE_INTERNAL') || die();
 
 $observers = [
     [
-        'eventname' => '\core\event\role_assigned', // событие, на которое реагируем
-        'callback'  => '\local_coursegroups\observer::local_coursegroups_handle_role_assigned', // функция которая выполнится при событии
+        'eventname' => '\core\event\role_assigned',
+        'callback'  => '\local_coursegroups\observer::local_coursegroups_handle_role_assigned',
+    ],
+    [
+        'eventname' => '\core\event\user_updated',
+        'callback'  => '\local_coursegroups\observer::local_coursegroups_handle_user_updated',
     ],
 ];
