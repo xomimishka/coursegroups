@@ -60,15 +60,12 @@ class handle_user_updated extends adhoc_task {
             $usergroups = groups_get_all_groups($course->id, $userid);
 
             if ($usergroups) {
+
+                $pattern = '/^(?:КТ|ЭП|УЭ)/u';
+
                 foreach ($usergroups as $ugroup) {
 
-                    $groupname = $ugroup->name;
-
-                    if (
-                        str_starts_with($groupname, 'КТ') ||
-                        str_starts_with($groupname, 'ЭП') ||
-                        str_starts_with($groupname, 'УЭ')
-                    ) {
+                    if (preg_match($pattern, $ugroup->name)) {
                         groups_remove_member($ugroup->id, $userid);
                     }
                 }
