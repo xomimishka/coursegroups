@@ -15,6 +15,13 @@ class handle_user_updated extends adhoc_task {
     public function execute(): void {
         global $DB;
 
+        // Плагин выключен — ничего не делаем
+        if (!get_config('local_coursegroups', 'isenabled')) {
+            return;
+        }
+
+        $ignoreolddate = (int)get_config('local_coursegroups', 'ignoreolddate');
+
         $data = $this->get_custom_data();
         $userid = $data->userid ?? null;
 
@@ -34,14 +41,16 @@ class handle_user_updated extends adhoc_task {
             return;
         }
 
-        // Получаем все курсы пользователя
         $courses = enrol_get_users_courses($userid, true);
 
         foreach ($courses as $course) {
 
+            if ($ignoreolddate > 0 && $course->startdate < $ignoreolddate) {
+                continue;
+            }
+
             $context = \context_course::instance($course->id);
 
-            // Проверяем роль student
             $roles = get_user_roles($context, $userid, true);
             $isstudent = false;
 
@@ -56,22 +65,17 @@ class handle_user_updated extends adhoc_task {
                 continue;
             }
 
-            // Удаление из старой лок группы
             $usergroups = groups_get_all_groups($course->id, $userid);
+            $pattern = '/^(?:КТ|ЭП|УЭ)[бса][озв]/u';
 
             if ($usergroups) {
-
-                $pattern = '/^(?:КТ|ЭП|УЭ)[бса][озв]/u';
-
                 foreach ($usergroups as $ugroup) {
-
-                    if (preg_match($pattern, $ugroup->name)) {
+                    if (preg_match($pattern, $ugroup->name) && $ugroup->name !== $stgroup) {
                         groups_remove_member($ugroup->id, $userid);
                     }
                 }
             }
 
-            // Ищем или создаём группу
             $group = $DB->get_record('groups', [
                 'courseid' => $course->id,
                 'name'     => $stgroup,

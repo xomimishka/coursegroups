@@ -68,6 +68,13 @@ class observer {
     }
 
     public static function local_coursegroups_handle_user_updated(\core\event\user_updated $event) {
+    global $DB;
+
+    // Проверка включён ли плагин
+    $isenabled = get_config('local_coursegroups', 'isenabled');
+    if (!$isenabled) {
+        return;
+    }
 
     $task = new \local_coursegroups\task\handle_user_updated();
     $task->set_custom_data([
@@ -75,6 +82,5 @@ class observer {
     ]);
 
     \core\task\manager::queue_adhoc_task($task);
-    }
-
+}
 }

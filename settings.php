@@ -49,6 +49,21 @@ if ($hassiteconfig) {
             0,
             PARAM_INT
         ));
+
+        // Кнопка массового перерасчёта групп.
+$buttonhtml = $OUTPUT->single_button(
+    new moodle_url('/local/coursegroups/run.php'),
+    get_string('runrebuild', 'local_coursegroups'),
+    'post',
+    ['class' => 'btn btn-primary']
+);
+
+$settings->add(new admin_setting_heading(
+    'local_coursegroups/runrebuild',
+    '',
+    $buttonhtml
+));
+
     }
 
     $ADMIN->add('localplugins', $settings);
