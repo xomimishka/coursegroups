@@ -1,34 +1,40 @@
 <?php
 require_once(__DIR__ . '/../../config.php');
+require_once($CFG->libdir . '/adminlib.php');
+require_once($CFG->dirroot . '/group/lib.php');
+require_once($CFG->dirroot . '/user/profile/lib.php');
 
 require_login();
 require_capability('moodle/site:config', context_system::instance());
 
-require_once($CFG->dirroot . '/group/lib.php');
-require_once($CFG->dirroot . '/lib/accesslib.php');
-require_once($CFG->dirroot . '/user/profile/lib.php');
-require_once($CFG->dirroot . '/lib/sessionlib.php');
+admin_externalpage_setup('local_coursegroups_runall');
 
 global $DB;
 
-error_log('local_coursegroups_runall STARTED: ' . date('Y-m-d H:i:s'));
+echo $OUTPUT->header();
+echo $OUTPUT->heading(get_string('runrebuild', 'local_coursegroups'));
 
-// Проверка включён ли плагин
 if (!get_config('local_coursegroups', 'isenabled')) {
-    error_log('local_coursegroups_runall: plugin disabled');
-    redirect(new moodle_url('/admin/settings.php?section=local_coursegroups_settings'), 
-             'Плагин выключен', null, \core\output\notification::WARNING);
+    echo $OUTPUT->notification(
+        get_string('plugindisabled', 'local_coursegroups'),
+        'warning'
+    );
+    echo $OUTPUT->footer();
+    exit;
 }
 
 $ignoreolddate = (int)get_config('local_coursegroups', 'ignoreolddate');
-
-// Роль student
 $studentrole = $DB->get_record('role', ['shortname' => 'student'], '*', MUST_EXIST);
 
-// Все студенты в системе
+$processed = 0;
+
 $courses = $DB->get_records('course', null, '', 'id, startdate');
 
 foreach ($courses as $course) {
+
+    if ($course->id == SITEID) {
+        continue;
+    }
 
     if ($ignoreolddate > 0 && $course->startdate < $ignoreolddate) {
         continue;
@@ -56,8 +62,8 @@ foreach ($courses as $course) {
             continue;
         }
 
-        $usergroups = groups_get_all_groups($course->id, $user->id);
         $pattern = '/^(?:КТ|ЭП|УЭ)[бса][озв]/u';
+        $usergroups = groups_get_all_groups($course->id, $user->id);
 
         if ($usergroups) {
             foreach ($usergroups as $ugroup) {
@@ -69,13 +75,13 @@ foreach ($courses as $course) {
 
         $group = $DB->get_record('groups', [
             'courseid' => $course->id,
-            'name'     => $stgroup,
+            'name' => $stgroup,
         ]);
 
         if (!$group) {
             $group = (object)[
                 'courseid' => $course->id,
-                'name'     => $stgroup,
+                'name' => $stgroup,
                 'timecreated' => time(),
                 'timemodified' => time(),
             ];
@@ -85,5 +91,14 @@ foreach ($courses as $course) {
         if (!groups_is_member($group->id, $user->id)) {
             groups_add_member($group->id, $user->id);
         }
+
+        $processed++;
     }
 }
+
+echo $OUTPUT->notification(
+    "Переопределение локальные групп завершено. Обработано пользователей: {$processed}",
+    'success'
+);
+
+echo $OUTPUT->footer();

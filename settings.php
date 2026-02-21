@@ -33,7 +33,6 @@ if ($hassiteconfig) {
 
     if ($ADMIN->fulltree) {
 
-        // Включить / выключить плагин.
         $settings->add(new admin_setting_configcheckbox(
             'local_coursegroups/isenabled',
             new lang_string('isenabled', 'local_coursegroups'),
@@ -41,7 +40,6 @@ if ($hassiteconfig) {
             1
         ));
 
-        // Ограничение по дате.
         $settings->add(new admin_setting_configtext(
             'local_coursegroups/ignoreolddate',
             new lang_string('ignoreolddate', 'local_coursegroups'),
@@ -49,17 +47,13 @@ if ($hassiteconfig) {
             0,
             PARAM_INT
         ));
-
-        // Кнопка массового перерасчёта групп.
-        $runurl = new moodle_url('/local/coursegroups/local_coursegroups_runall.php');
-        $buttonhtml = $OUTPUT->single_button($runurl, get_string('runrebuild', 'local_coursegroups'));
-
-        $settings->add(new admin_setting_heading(
-            'local_coursegroups/runrebuild',
-            '',
-            $buttonhtml
-        ));
     }
 
     $ADMIN->add('localplugins', $settings);
+
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_coursegroups_runall',
+        get_string('runrebuild', 'local_coursegroups'),
+        new moodle_url('/local/coursegroups/runall.php')
+    ));
 }

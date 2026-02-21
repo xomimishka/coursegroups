@@ -29,3 +29,6 @@ $string['isenabled_desc'] = 'If disabled, the plugin will not assign users to gr
 
 $string['ignoreolddate'] = 'Ignore old courses';
 $string['ignoreolddate_desc'] = 'Specify a Unix timestamp. The plugin will only process courses created after this date.';
+
+$string['runrebuild'] = 'Rebuild local groups';
+$string['plugindisabled'] = 'Plugin is disabled. Enable it in settings to perform this action.';
