@@ -1,15 +1,23 @@
 <?php
 require_once(__DIR__ . '/../../config.php');
-require_once($CFG->dirroot . '/group/lib.php');
-require_once($CFG->dirroot . '/lib/accesslib.php');
-require_once($CFG->dirroot . '/user/profile/lib.php');
 
 require_login();
 require_capability('moodle/site:config', context_system::instance());
 
+require_once($CFG->dirroot . '/group/lib.php');
+require_once($CFG->dirroot . '/lib/accesslib.php');
+require_once($CFG->dirroot . '/user/profile/lib.php');
+require_once($CFG->dirroot . '/lib/sessionlib.php');
+
+global $DB;
+
+error_log('local_coursegroups_runall STARTED: ' . date('Y-m-d H:i:s'));
+
 // Проверка включён ли плагин
 if (!get_config('local_coursegroups', 'isenabled')) {
-    throw new moodle_exception('plugindisabled', 'local_coursegroups');
+    error_log('local_coursegroups_runall: plugin disabled');
+    redirect(new moodle_url('/admin/settings.php?section=local_coursegroups_settings'), 
+             'Плагин выключен', null, \core\output\notification::WARNING);
 }
 
 $ignoreolddate = (int)get_config('local_coursegroups', 'ignoreolddate');
@@ -18,28 +26,33 @@ $ignoreolddate = (int)get_config('local_coursegroups', 'ignoreolddate');
 $studentrole = $DB->get_record('role', ['shortname' => 'student'], '*', MUST_EXIST);
 
 // Все студенты в системе
-$students = get_role_users(
-    $studentrole->id,
-    context_system::instance(),
-    false,
-    'u.*',
-    'u.id'
-);
+$courses = $DB->get_records('course', null, '', 'id, startdate');
 
-foreach ($students as $user) {
+foreach ($courses as $course) {
 
-    profile_load_custom_fields($user);
-    $stgroup = $user->profile['stGroup'] ?? null;
-    if (empty($stgroup)) {
+    if ($ignoreolddate > 0 && $course->startdate < $ignoreolddate) {
         continue;
     }
 
-    // Курсы пользователя
-    $courses = enrol_get_users_courses($user->id, true);
+    $context = context_course::instance($course->id, IGNORE_MISSING);
+    if (!$context) {
+        continue;
+    }
 
-    foreach ($courses as $course) {
+    $students = get_role_users(
+        $studentrole->id,
+        $context,
+        false,
+        'u.*',
+        'u.id'
+    );
 
-        if ($ignoreolddate > 0 && $course->startdate < $ignoreolddate) {
+    foreach ($students as $user) {
+
+        profile_load_custom_fields($user);
+        $stgroup = $user->profile['stGroup'] ?? null;
+
+        if (empty($stgroup)) {
             continue;
         }
 
@@ -60,18 +73,13 @@ foreach ($students as $user) {
         ]);
 
         if (!$group) {
-            $newgroup = (object)[
-                'courseid'     => $course->id,
-                'name'         => $stgroup,
-                'timecreated'  => time(),
+            $group = (object)[
+                'courseid' => $course->id,
+                'name'     => $stgroup,
+                'timecreated' => time(),
                 'timemodified' => time(),
             ];
-            $groupid = groups_create_group($newgroup);
-            if (!$groupid) {
-                continue;
-            }
-            $group = $newgroup;
-            $group->id = $groupid;
+            $group->id = groups_create_group($group);
         }
 
         if (!groups_is_member($group->id, $user->id)) {
@@ -79,10 +87,3 @@ foreach ($students as $user) {
         }
     }
 }
-
-redirect(
-    new moodle_url('/admin/settings.php', ['section' => 'local_coursegroups_settings']),
-    get_string('runrebuilddone', 'local_coursegroups'),
-    null,
-    \core\output\notification::NOTIFY_SUCCESS
-);
